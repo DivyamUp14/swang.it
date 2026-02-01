@@ -4327,6 +4327,10 @@ io.on('connection', (socket) => {
       console.log(`[DEBUG-CALL] Starting CALENDAR session (No per-minute billing).`);
       await db.prepare('UPDATE sessions SET active = 1, started_at = COALESCE(started_at, CURRENT_TIMESTAMP) WHERE id = ?').run(session.id);
 
+      // FIX: Set consultant as busy for calendar bookings too
+      await db.prepare('UPDATE users SET is_busy = 1 WHERE id = ?').run(consultantId);
+      io.emit('consultant_status_update', { consultantId, is_busy: true });
+
       const customerRow = await db.prepare('SELECT credits FROM users WHERE id = ?').get(customerId);
       const consultantRow = await db.prepare('SELECT credits FROM users WHERE id = ?').get(consultantId);
       io.to(room).emit('balances', { customerCredits: customerRow?.credits || 0, consultantCredits: consultantRow?.credits || 0 });
@@ -5149,7 +5153,7 @@ async function endSession(room, sessionId, customerId = null, consultantId = nul
     // FIX: Mark the request as COMPLETED so it doesn't get auto-cancelled by cleanup job
     // This prevents the "Refund after 3 hours" bug
     if (sessionBefore.request_id) { // Use sessionBefore.request_id as requestId is not passed to endSession
-       await db.prepare("UPDATE requests SET status = 'completed' WHERE id = ?").run(sessionBefore.request_id);
+      await db.prepare("UPDATE requests SET status = 'completed' WHERE id = ?").run(sessionBefore.request_id);
     }
 
     // FIX #7: Update consultant busy status when session ends
