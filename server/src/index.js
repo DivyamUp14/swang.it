@@ -7675,5 +7675,3 @@ setInterval(checkAndReleaseExpiredAppointmentCredits, 60 * 1000);
 setInterval(checkAndExpireRequests, 60 * 1000);
 
 server.listen(PORT);
-
-

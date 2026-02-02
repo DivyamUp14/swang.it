@@ -208,6 +208,33 @@ const ConsultantProfileManagement = () => {
           <p className="text-gray-600">Aggiorna il tuo profilo pubblico e i prezzi</p>
         </div>
 
+        {user && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-8">
+            <label className="block text-sm font-medium text-blue-900 mb-2">
+              Il tuo Link Personale (Condividi questo link con i tuoi clienti)
+            </label>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                readOnly
+                value={`https://swang.it/consultant/${user.id}`}
+                className="flex-1 p-2 border border-blue-300 rounded-md bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                onClick={(e) => e.target.select()}
+              />
+              <Button
+                onClick={() => {
+                  navigator.clipboard.writeText(`https://swang.it/consultant/${user.id}`);
+                  alert('Link copiato negli appunti!');
+                }}
+                variant="secondary"
+                className="whitespace-nowrap bg-white hover:bg-gray-50 text-blue-600 border border-blue-200"
+              >
+                Copia Link
+              </Button>
+            </div>
+          </div>
+        )}
+
         {success && (
           <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg mb-6">
             Profilo aggiornato con successo!
