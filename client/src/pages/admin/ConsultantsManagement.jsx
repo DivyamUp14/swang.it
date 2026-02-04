@@ -150,16 +150,16 @@ export default function ConsultantsManagement() {
         <div className="text-center py-12">Caricamento...</div>
       ) : (
         <>
-          <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+          <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Credits</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Credits</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -168,10 +168,10 @@ export default function ConsultantsManagement() {
                   const displayName = consultant.name || consultant.user_full_name || 'N/A';
                   return (
                     <tr key={consultant.id}>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{consultant.id}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{email}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{displayName}</td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{consultant.id}</td>
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{email}</td>
+                      <td className="px-4 py-3 whitespace-normal min-w-[150px] text-sm text-gray-900 break-words">{displayName}</td>
+                      <td className="px-4 py-3 whitespace-nowrap">
                         <span className={`px-2 py-1 text-xs rounded ${consultant.status === 'active' ? 'bg-green-100 text-green-800' :
                           consultant.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
                             'bg-red-100 text-red-800'
@@ -179,42 +179,43 @@ export default function ConsultantsManagement() {
                           {consultant.status}
                         </span>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">€{Number(consultant.credits || 0).toFixed(2)}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">
-                        <div className="flex gap-2 flex-wrap">
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">€{Number(consultant.credits || 0).toFixed(2)}</td>
+                      <td className="px-4 py-3 whitespace-nowrap text-sm">
+                        <div className="flex gap-2 flex-nowrap">
                           <Button
                             size="sm"
                             variant="secondary"
-                            className="text-blue-600 hover:text-blue-800"
+                            className="text-blue-600 hover:text-blue-800 !px-2 !py-1 !text-xs"
                             onClick={() => setViewConsultantId(consultant.id)}
                             title="View Full Profile"
                           >
                             <FaEye />
                           </Button>
                           {consultant.status !== 'active' && (
-                            <Button size="sm" variant="primary" onClick={() => updateStatus(consultant.id, 'active')}>
+                            <Button size="sm" variant="primary" className="!px-2 !py-1 !text-xs" onClick={() => updateStatus(consultant.id, 'active')}>
                               Approve
                             </Button>
                           )}
                           {consultant.status !== 'inactive' && (
-                            <Button size="sm" variant="secondary" onClick={() => updateStatus(consultant.id, 'inactive')}>
+                            <Button size="sm" variant="secondary" className="!px-2 !py-1 !text-xs" onClick={() => updateStatus(consultant.id, 'inactive')}>
                               Deactivate
                             </Button>
                           )}
                           {consultant.status !== 'pending' && (
-                            <Button size="sm" variant="secondary" onClick={() => updateStatus(consultant.id, 'pending')}>
+                            <Button size="sm" variant="secondary" className="!px-2 !py-1 !text-xs" onClick={() => updateStatus(consultant.id, 'pending')}>
                               Set Pending
                             </Button>
                           )}
-                          <Button size="sm" variant="secondary" onClick={() => suspendConsultant(consultant.id)}>
+                          <Button size="sm" variant="secondary" className="!px-2 !py-1 !text-xs" onClick={() => suspendConsultant(consultant.id)}>
                             Suspend
                           </Button>
-                          <Button size="sm" variant="secondary" onClick={() => loadStats(consultant.id)}>
+                          <Button size="sm" variant="secondary" className="!px-2 !py-1 !text-xs" onClick={() => loadStats(consultant.id)}>
                             Stats
                           </Button>
                           <Button
                             size="sm"
                             variant="danger"
+                            className="!px-2 !py-1 !text-xs"
                             onClick={() => deleteConsultant(consultant.id)}
                             title="Elimina account definitivamente"
                           >

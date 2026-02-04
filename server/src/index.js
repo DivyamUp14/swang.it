@@ -1711,7 +1711,8 @@ app.get('/api/consultants', optionalAuthMiddleware, async (req, res) => {
     if (isPublic && !isAdmin) {
       try {
         const platformSetting = await db.prepare('SELECT value FROM system_settings WHERE `key` = ?').get('platform_visible');
-        const platformVisible = platformSetting?.value === 'true' || platformSetting?.value === '1';
+        // Default to visible if setting doesn't exist yet
+        const platformVisible = !platformSetting || platformSetting.value === 'true' || platformSetting.value === '1';
 
         if (!platformVisible) {
           // Platform is hidden - return empty list
@@ -1859,6 +1860,13 @@ app.post('/api/requests', authMiddleware, requireRole('customer'), async (req, r
 
     const consultant = await db.prepare("SELECT id FROM users WHERE id = ? AND role = 'consultant'").get(consultantId);
     if (!consultant) return res.status(404).json({ error: 'Consultant not found' });
+
+    // Requirement #0: Prevent new requests if consultant is BUSY (in another call)
+    // FIX: Client requested to block calls if status is "In consultation"
+    const activeSession = await db.prepare("SELECT id FROM sessions WHERE consultant_id = ? AND active = 1 AND ended_at IS NULL").get(consultantId);
+    if (activeSession) {
+      return res.status(409).json({ error: 'Il consulente è attualmente occupato in un\'altra consultazione.' });
+    }
 
     // Requirement #1: Only prevent duplicate PENDING requests
     const existingPending = await db.prepare("SELECT id FROM requests WHERE customer_id = ? AND consultant_id = ? AND status = 'pending'").get(req.user.id, consultantId);
@@ -4331,6 +4339,9 @@ io.on('connection', (socket) => {
       await db.prepare('UPDATE users SET is_busy = 1 WHERE id = ?').run(consultantId);
       io.emit('consultant_status_update', { consultantId, is_busy: true });
 
+      // SECURITY: Emit confirmation that session is active so client can load Jitsi
+      io.to(room).emit('call_active_confirmed', { sessionId: session.id });
+
       const customerRow = await db.prepare('SELECT credits FROM users WHERE id = ?').get(customerId);
       const consultantRow = await db.prepare('SELECT credits FROM users WHERE id = ?').get(consultantId);
       io.to(room).emit('balances', { customerCredits: customerRow?.credits || 0, consultantCredits: consultantRow?.credits || 0 });
@@ -4361,6 +4372,9 @@ io.on('connection', (socket) => {
 
       // FIX #23: Start monitoring for abandoned chat sessions
       startChatMonitoring(room, session.id, consultantId, customerId);
+
+      // SECURITY: Emit confirmation that session is active
+      io.to(room).emit('call_active_confirmed', { sessionId: session.id });
 
       const customerRow = await db.prepare('SELECT credits FROM users WHERE id = ?').get(customerId);
       const consultantRow = await db.prepare('SELECT credits FROM users WHERE id = ?').get(consultantId);
@@ -4394,6 +4408,10 @@ io.on('connection', (socket) => {
     if (hasCustomer && hasConsultant) {
       await db.prepare('UPDATE sessions SET active = 1, started_at = COALESCE(started_at, CURRENT_TIMESTAMP) WHERE id = ?').run(session.id);
       await startBilling(room, customerId, consultantId, session.id, sessionType);
+
+      // SECURITY: Emit confirmation that billing has successfully started
+      io.to(room).emit('call_active_confirmed', { sessionId: session.id });
+
       io.to(room).emit('presence', { count: 2 });
     } else {
       io.to(room).emit('error', {
@@ -5663,6 +5681,12 @@ app.get('/api/admin/users/:id', authMiddleware, requireAdmin, async (req, res) =
       user: {
         id: user.id,
         email: user.email,
+        full_name: user.full_name,
+        nickname: user.nickname,
+        phone: user.phone,
+        city: user.city,
+        country: user.country,
+        timezone: user.timezone,
         role: user.role,
         credits: user.credits,
         created_at: user.created_at,
@@ -6173,6 +6197,7 @@ app.delete('/api/account', authMiddleware, async (req, res) => {
 
     // Clear auth cookie
     res.clearCookie('token');
+    console.log(`[USER_DELETED] User ${id} deleted their own account.`);
     res.json({ message: 'Account deleted successfully' });
   } catch (error) {
     console.error('Error deleting account:', error);
@@ -6211,6 +6236,7 @@ app.delete('/api/admin/users/:id', authMiddleware, requireAdmin, async (req, res
     // Deleting the user will cascade delete requests, sessions, messages, transactions (if set to cascade), etc.
     await db.prepare('DELETE FROM users WHERE id = ?').run(id);
 
+    console.log(`[ADMIN_ACTION] Admin ${req.user.id} deleted user ${id}.`);
     res.json({ message: 'User deleted successfully' });
   } catch (error) {
     console.error('Error deleting user:', error);

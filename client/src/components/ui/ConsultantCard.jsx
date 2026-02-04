@@ -131,8 +131,8 @@ const ConsultantCard = ({ consultant, requestStatus, onSendRequest, onFavorite, 
                   variant="primary"
                   size="sm"
                   onClick={() => onSendRequest && onSendRequest(consultant.id, 'voice')}
-                  disabled={!isOnline || (requestStatus && requestStatus.status === 'pending')}
-                  className={(!isOnline || (requestStatus && requestStatus.status === 'pending')) ? 'opacity-50 cursor-not-allowed' : ''}
+                  disabled={!isOnline || isBusy || (requestStatus && requestStatus.status === 'pending')}
+                  className={(!isOnline || isBusy || (requestStatus && requestStatus.status === 'pending')) ? 'opacity-50 cursor-not-allowed' : ''}
                   title={requestStatus && requestStatus.status === 'pending' ? 'Richiesta in attesa' : 'Chiamata Vocale'}
                 >
                   <FaPhone className="w-4 h-4" />
@@ -143,8 +143,8 @@ const ConsultantCard = ({ consultant, requestStatus, onSendRequest, onFavorite, 
                   variant="primary"
                   size="sm"
                   onClick={() => onSendRequest && onSendRequest(consultant.id, 'video')}
-                  disabled={!isOnline || (requestStatus && requestStatus.status === 'pending')}
-                  className={(!isOnline || (requestStatus && requestStatus.status === 'pending')) ? 'opacity-50 cursor-not-allowed' : ''}
+                  disabled={!isOnline || isBusy || (requestStatus && requestStatus.status === 'pending')}
+                  className={(!isOnline || isBusy || (requestStatus && requestStatus.status === 'pending')) ? 'opacity-50 cursor-not-allowed' : ''}
                   title={requestStatus && requestStatus.status === 'pending' ? 'Richiesta in attesa' : 'Videochiamata'}
                 >
                   <FaVideo className="w-4 h-4" />
@@ -155,8 +155,8 @@ const ConsultantCard = ({ consultant, requestStatus, onSendRequest, onFavorite, 
                   variant="secondary"
                   size="sm"
                   onClick={() => onSendRequest && onSendRequest(consultant.id, 'chat')}
-                  disabled={!isOnline || (requestStatus && requestStatus.status === 'pending')}
-                  className={(!isOnline || (requestStatus && requestStatus.status === 'pending')) ? 'opacity-50 cursor-not-allowed' : ''}
+                  disabled={!isOnline || isBusy || (requestStatus && requestStatus.status === 'pending')}
+                  className={(!isOnline || isBusy || (requestStatus && requestStatus.status === 'pending')) ? 'opacity-50 cursor-not-allowed' : ''}
                   title={!isOnline ? 'Consulente offline' : (requestStatus && requestStatus.status === 'pending' ? 'Richiesta in attesa' : 'Chat')}
                 >
                   <FaComments className="w-4 h-4" />

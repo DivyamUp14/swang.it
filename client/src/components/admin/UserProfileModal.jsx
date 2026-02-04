@@ -68,9 +68,10 @@ export default function UserProfileModal({ userId, onClose }) {
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <InfoItem icon={FaUser} label="User ID" value={data.user.id} />
                                     <InfoItem icon={FaEnvelope} label="Email" value={data.user.email} />
-                                    <InfoItem icon={FaUser} label="Full Name" value={data.profile?.name || data.user.full_name || 'N/A'} />
-                                    <InfoItem icon={FaPhone} label="Phone" value={data.profile?.phone || data.user.phone || 'N/A'} />
+                                    <InfoItem icon={FaUser} label="Real Name" value={data.user.full_name || 'N/A'} />
                                     {data.user.nickname && <InfoItem icon={FaUser} label="Nickname" value={data.user.nickname} />}
+                                    <InfoItem icon={FaUser} label="Profile Name" value={data.profile?.name || 'N/A'} />
+                                    <InfoItem icon={FaPhone} label="Phone" value={data.user.phone || data.profile?.phone || 'N/A'} />
                                     <InfoItem icon={FaMapMarkerAlt} label="Location" value={[data.user.city, data.user.country].filter(Boolean).join(', ') || 'N/A'} />
                                     <InfoItem icon={FaClock} label="Timezone" value={data.user.timezone || 'UTC'} />
                                     <InfoItem icon={FaCalendarAlt} label="Joined At" value={new Date(data.user.created_at).toLocaleString()} />

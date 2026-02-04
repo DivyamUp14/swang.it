@@ -26,6 +26,7 @@ export default function CallPage() {
   const hasJoinedRef = useRef(false)
   const videoUpgradePromptedRef = useRef(false) // Track if upgrade confirmation was shown
   const [callType, setCallType] = useState(null) // Track current call type
+  const [isSessionActive, setIsSessionActive] = useState(false) // SECURITY: Gate Jitsi until server confirms billing
 
   // Load session room - only once on mount
   useEffect(() => {
@@ -78,6 +79,12 @@ export default function CallPage() {
       // Store CPM for countdown/estimates
       setCreditsPerMinute(data.creditsPerMinute || 1)
 
+      // SECURITY: If session is already active (reload case), allow Jitsi immediately
+      if (data.session.active === 1 || data.session.active === true) {
+        console.log('[DEBUG-CLIENT] Session already active, allowing Jitsi immediately');
+        setIsSessionActive(true);
+      }
+
       const mr = await fetch(`${apiBase}/api/requests/${requestId}/messages`, { headers })
       if (mr.ok) {
         const chatMessages = await mr.json()
@@ -99,6 +106,10 @@ export default function CallPage() {
         // Check if it is a calendar booking
         if (requestType === 'calendar' || reqData.is_calendar) {
           setIsCalendarBooking(true)
+          // Calendar bookings are pre-paid/approved, so we can allow Jitsi immediately or wait for start
+          // Better strictly wait for fairness, or allow if logic permits. 
+          // Current backend logic emits 'call_active_confirmed' for booking too.
+          // But to avoid "waiting" for start time if slot is open, we can rely on backend 'active' check above.
         }
 
         // Load consultant info for review modal (works for both regular calls and calendar bookings)
@@ -177,6 +188,11 @@ export default function CallPage() {
         socket.emit('start_call', { requestId: Number(requestId) })
       }
     })
+
+    socket.on('call_active_confirmed', ({ sessionId }) => {
+      console.log(`[DEBUG-CLIENT] Received call_active_confirmed for SessionID: ${sessionId}`);
+      setIsSessionActive(true);
+    });
 
     socket.on('chat_message', (m) => {
       setMessages((prev) => {
@@ -285,7 +301,8 @@ export default function CallPage() {
 
   // Jitsi initialization
   useEffect(() => {
-    if (!room || !jitsiRef.current) return
+    // SECURITY: Do not load Jitsi until session is confirmed active by server (or is calendar booking and active)
+    if (!room || !jitsiRef.current || !isSessionActive) return
 
     // Get Jitsi domain from environment
     const jitsiDomainEnvRaw = typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_JITSI_DOMAIN
@@ -716,7 +733,7 @@ export default function CallPage() {
       }
       jitsiApiRef.current = null
     }
-  }, [room, requestId, user.email])
+  }, [room, requestId, user.email, isSessionActive])
 
   // Determine if this is a calendar booking (scheduled) or instant call
   // We can infer this from the request type or if we have booking info
@@ -954,3 +971,4 @@ export default function CallPage() {
     </div>
   )
 }
+

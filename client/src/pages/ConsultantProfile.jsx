@@ -469,7 +469,7 @@ const ConsultantProfile = () => {
                     <>
                       <button
                         onClick={() => handleSendRequest('voice')}
-                        disabled={!isOnline}
+                        disabled={!isOnline || isBusy}
                         className={`flex flex-col items-center justify-center p-6 rounded-lg border-2 transition-all ${!isOnline
                           ? 'opacity-50 cursor-not-allowed bg-gray-50 border-gray-200'
                           : 'bg-blue-600 border-blue-600 hover:bg-blue-700 hover:border-blue-700 text-white shadow-md hover:shadow-lg transform hover:scale-105'
@@ -480,7 +480,7 @@ const ConsultantProfile = () => {
                       </button>
                       <button
                         onClick={() => handleSendRequest('video')}
-                        disabled={!isOnline}
+                        disabled={!isOnline || isBusy}
                         className={`flex flex-col items-center justify-center p-6 rounded-lg border-2 transition-all ${!isOnline
                           ? 'opacity-50 cursor-not-allowed bg-gray-50 border-gray-200'
                           : 'bg-blue-600 border-blue-600 hover:bg-blue-700 hover:border-blue-700 text-white shadow-md hover:shadow-lg transform hover:scale-105'
@@ -491,7 +491,7 @@ const ConsultantProfile = () => {
                       </button>
                       <button
                         onClick={() => handleSendRequest('chat')}
-                        disabled={!isOnline}
+                        disabled={!isOnline || isBusy}
                         className={`flex flex-col items-center justify-center p-6 rounded-lg border-2 transition-all ${!isOnline
                           ? 'opacity-50 cursor-not-allowed bg-gray-50 border-gray-200'
                           : 'bg-gray-100 border-gray-300 hover:bg-gray-200 hover:border-gray-400 text-gray-900 shadow-md hover:shadow-lg transform hover:scale-105'
