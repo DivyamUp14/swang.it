@@ -235,10 +235,16 @@ CREATE TABLE IF NOT EXISTS users (
     /* MIGRATION: Update requests status to VARCHAR to fix truncation issues and support 'completed' */
     await (async () => {
       try {
-        await db.pool.query("ALTER TABLE requests MODIFY COLUMN status VARCHAR(50) NOT NULL DEFAULT 'pending'");
-        // Debug: Check schema after migration
         const [cols] = await db.pool.query("SHOW COLUMNS FROM requests LIKE 'status'");
-        console.log('[MIGRATION] Requests status column schema:', cols);
+        const needsMigration = !cols[0]?.Type.includes('varchar');
+
+        if (needsMigration) {
+          console.log('[MIGRATION] Updating requests status column to VARCHAR...');
+          await db.pool.query("ALTER TABLE requests MODIFY COLUMN status VARCHAR(50) NOT NULL DEFAULT 'pending'");
+          console.log('[MIGRATION] Requests status column updated.');
+        } else {
+          // Already migrated, skip to avoid Deadlocks
+        }
       } catch (e) {
         console.error('[MIGRATION] Error updating requests status schema:', e.message);
       }
@@ -3322,7 +3328,6 @@ app.get('/api/my-reviews', authMiddleware, requireRole('customer'), async (req, 
 app.get('/api/my-requests', authMiddleware, async (req, res) => {
   try {
     const userId = req.user.id;
-    console.log(`[DEBUG] /api/my-requests hit by User: ${userId} (${req.user.role})`);
     let query;
 
     if (req.user.role === 'customer') {
@@ -4325,21 +4330,16 @@ io.on('connection', (socket) => {
 
     console.log(`[DEBUG-CALL] Start Call Participants: Customer=${hasCustomer}, Consultant=${hasConsultant}`);
 
-    const existingBilling = sessionState.get(room)?.intervalId;
-    if (existingBilling) {
-      console.log(`[DEBUG-CALL] Billing already active for room ${room}, skipping start.`);
-      return;
-    }
+    // --- REFACTORED START LOGIC: Price & Credit Check FIRST ---
+    const consultantProfile = await db.prepare('SELECT voice_price, video_price FROM consultant_profiles WHERE consultant_id = ?').get(consultantId);
+    const sessionType = session.type || reqRow.type || 'chat';
 
+    // Calendar Check (moved up)
     if (isCalendarBooking) {
       console.log(`[DEBUG-CALL] Starting CALENDAR session (No per-minute billing).`);
       await db.prepare('UPDATE sessions SET active = 1, started_at = COALESCE(started_at, CURRENT_TIMESTAMP) WHERE id = ?').run(session.id);
-
-      // FIX: Set consultant as busy for calendar bookings too
       await db.prepare('UPDATE users SET is_busy = 1 WHERE id = ?').run(consultantId);
       io.emit('consultant_status_update', { consultantId, is_busy: true });
-
-      // SECURITY: Emit confirmation that session is active so client can load Jitsi
       io.to(room).emit('call_active_confirmed', { sessionId: session.id });
 
       const customerRow = await db.prepare('SELECT credits FROM users WHERE id = ?').get(customerId);
@@ -4348,18 +4348,47 @@ io.on('connection', (socket) => {
       return;
     }
 
+    // Calculate Price Per Minute FIRST to verify balance
+    let pricePerMinute = Number(CREDITS_PER_MINUTE);
+    console.log(`[DEBUG-BILLING] Base CREDITS_PER_MINUTE: ${CREDITS_PER_MINUTE}`);
+    console.log(`[DEBUG-BILLING] Session Type: ${sessionType}`);
+    console.log(`[DEBUG-BILLING] Consultant Profile:`, consultantProfile);
+
+    if (sessionType === 'voice' && consultantProfile?.voice_price) {
+      pricePerMinute = Number(consultantProfile.voice_price) || CREDITS_PER_MINUTE;
+    } else if (sessionType === 'video' && consultantProfile?.video_price) {
+      pricePerMinute = Number(consultantProfile.video_price) || CREDITS_PER_MINUTE;
+    }
+    console.log(`[DEBUG-BILLING] Calculated pricePerMinute: ${pricePerMinute}`);
+
+    if (isNaN(pricePerMinute) || pricePerMinute <= 0) {
+      pricePerMinute = Number(CREDITS_PER_MINUTE);
+    }
+
+    // Check if customer has enough credits for at least 1 minute
     const customer = await db.prepare('SELECT credits FROM users WHERE id = ?').get(customerId);
-    if (!customer || customer.credits <= 0) {
+    console.log(`[DEBUG-BILLING] Customer Credits: ${customer?.credits} (Type: ${typeof customer?.credits})`);
+
+    // Force numeric comparison
+    const numericCredits = Number(customer?.credits || 0);
+    console.log(`[DEBUG-BILLING] Check Condition: ${numericCredits} < ${pricePerMinute} = ${numericCredits < pricePerMinute}`);
+
+    if (!customer || numericCredits < pricePerMinute) {
+      console.log(`[DEBUG-BILLING] BLOCKED: Insufficient credits.`);
       io.to(room).emit('error', {
         type: 'insufficient_credits',
-        message: 'Crediti insufficienti per iniziare la videochiamata. Ricarica il tuo account.'
+        message: `Crediti insufficienti. Serve almeno €${pricePerMinute} per iniziare.`
       });
+      // Force end session
       await endSession(room, session.id, customerId, consultantId, 'insufficient_credits');
       return;
     }
 
-    const consultantProfile = await db.prepare('SELECT voice_price, video_price FROM consultant_profiles WHERE consultant_id = ?').get(consultantId);
-    const sessionType = session.type || reqRow.type || 'chat';
+    const existingBilling = sessionState.get(room)?.intervalId;
+    if (existingBilling) {
+      console.log(`[DEBUG-CALL] Billing already active for room ${room}, skipping start.`);
+      return;
+    }
 
     // Don't start per-minute billing for chat sessions - chat uses per-message billing
     if (sessionType === 'chat') {
@@ -4383,36 +4412,34 @@ io.on('connection', (socket) => {
       return;
     }
 
-    let pricePerMinute = Number(CREDITS_PER_MINUTE);
-    if (sessionType === 'voice' && consultantProfile?.voice_price) {
-      pricePerMinute = Number(consultantProfile.voice_price) || CREDITS_PER_MINUTE;
-    } else if (sessionType === 'video' && consultantProfile?.video_price) {
-      pricePerMinute = Number(consultantProfile.video_price) || CREDITS_PER_MINUTE;
-    }
 
-    // Ensure pricePerMinute is a valid number
-    if (isNaN(pricePerMinute) || pricePerMinute <= 0) {
-      pricePerMinute = Number(CREDITS_PER_MINUTE);
-    }
-
-    // FIX: logic error string comparison - cast to Number
-    if (Number(customer.credits) < pricePerMinute) {
-      io.to(room).emit('error', {
-        type: 'insufficient_credits',
-        message: `Crediti insufficienti. Servono almeno ${pricePerMinute} crediti per iniziare la ${sessionType === 'voice' ? 'chiamata vocale' : 'videochiamata'}.`
-      });
-      await endSession(room, session.id, reqRow.customer_id, reqRow.consultant_id, 'insufficient_credits');
-      return;
-    }
 
     if (hasCustomer && hasConsultant) {
-      await db.prepare('UPDATE sessions SET active = 1, started_at = COALESCE(started_at, CURRENT_TIMESTAMP) WHERE id = ?').run(session.id);
-      await startBilling(room, customerId, consultantId, session.id, sessionType);
+      // SAFETY NET: Wrap call start in try/catch to prevent "Ghost Calls"
+      try {
+        // 1. Mark session active
+        await db.prepare('UPDATE sessions SET active = 1, started_at = COALESCE(started_at, CURRENT_TIMESTAMP) WHERE id = ?').run(session.id);
 
-      // SECURITY: Emit confirmation that billing has successfully started
-      io.to(room).emit('call_active_confirmed', { sessionId: session.id });
+        // 2. Start Billing (Using Internal Credits)
+        // If this throws an error (e.g. database fail or hidden dependency), we catch it below
+        await startBilling(room, customerId, consultantId, session.id, sessionType);
 
-      io.to(room).emit('presence', { count: 2 });
+        // 3. Confirm Success - Only sent if Billing started OK
+        // SECURITY: Emit confirmation that billing has successfully started
+        io.to(room).emit('call_active_confirmed', { sessionId: session.id });
+
+        io.to(room).emit('presence', { count: 2 });
+      } catch (error) {
+        console.error(`[CRITICAL-ERROR] Billing start failed for Session ${session.id}. Reverting active status.`, error);
+
+        // REVERT: Immediately close the session so it's not "free"
+        await db.prepare('UPDATE sessions SET active = 0 WHERE id = ?').run(session.id);
+
+        io.to(room).emit('error', {
+          type: 'billing_failed',
+          message: 'Errore nell\'avvio della fatturazione. Riprova più tardi.'
+        });
+      }
     } else {
       io.to(room).emit('error', {
         type: 'waiting_for_participant',

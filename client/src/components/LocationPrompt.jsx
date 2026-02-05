@@ -64,7 +64,11 @@ export default function LocationPrompt() {
                     <Button variant="secondary" onClick={handleClose}>
                         Ricordamelo dopo
                     </Button>
-                    <Button variant="primary" onClick={handleGoToProfile}>
+                    <Button
+                        variant="primary"
+                        onClick={handleGoToProfile}
+                        className="whitespace-nowrap flex items-center"
+                    >
                         <FaMapMarkerAlt className="mr-2" />
                         Aggiorna ora
                     </Button>

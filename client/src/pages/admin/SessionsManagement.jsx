@@ -123,25 +123,25 @@ export default function SessionsManagement() {
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Customer</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Consultant</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Duration</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Started</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ended</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Customer</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Consultant</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Duration</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Started</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ended</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {sessions.map(session => (
                     <tr key={session.id}>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{session.id}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{session.customer_email || 'N/A'}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{session.consultant_email || 'N/A'}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 capitalize">{session.type || 'N/A'}</td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{session.id}</td>
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{session.customer_email || 'N/A'}</td>
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{session.consultant_email || 'N/A'}</td>
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 capitalize">{session.type || 'N/A'}</td>
+                      <td className="px-4 py-3 whitespace-nowrap">
                         {session.active === 1 && !session.ended_at ? (
                           <span className="px-2 py-1 text-xs rounded bg-green-100 text-green-800">Active</span>
                         ) : !session.started_at && !session.ended_at ? (
@@ -150,24 +150,27 @@ export default function SessionsManagement() {
                           <span className="px-2 py-1 text-xs rounded bg-gray-100 text-gray-800">Ended</span>
                         )}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
                         {formatDuration(session.duration_minutes)}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
                         {session.started_at ? new Date(session.started_at).toLocaleString() : '-'}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
                         {session.ended_at ? new Date(session.ended_at).toLocaleString() : '-'}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      <td className="px-4 py-3 whitespace-nowrap text-sm">
                         {session.active === 1 && !session.ended_at && (
-                          <Button
-                            size="sm"
-                            variant="danger"
-                            onClick={() => forceClose(session.id)}
-                          >
-                            Force Close
-                          </Button>
+                          <div className="flex gap-2 flex-nowrap">
+                            <Button
+                              size="sm"
+                              variant="danger"
+                              className="!px-2 !py-1 !text-xs"
+                              onClick={() => forceClose(session.id)}
+                            >
+                              Force Close
+                            </Button>
+                          </div>
                         )}
                       </td>
                     </tr>

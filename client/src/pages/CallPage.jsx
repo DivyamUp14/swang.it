@@ -174,16 +174,17 @@ export default function CallPage() {
 
     socket.on('presence', ({ count }) => {
       setPresence(count)
-      if (count >= 2 && hasJoinedRef.current && !billingStartedRef.current) {
-        // Check balance before starting call (only for customers)
-        if (user?.role === 'customer') {
-          const currentCredits = balances.customerCredits ?? user?.credits ?? 0
-          if (currentCredits <= 0) {
-            alert('Crediti insufficienti per iniziare la videochiamata. Ricarica il tuo account.')
-            navigate('/')
-            return
-          }
+      // FIX: Trigger start_call immediately when 2 people are present, WITHOUT waiting for Jitsi to join.
+      // This breaks the "Deadlock" where we wait for session active to load Jitsi, but need Jitsi to start session.
+      // FIX 2: ONLY Customer triggers start_call to prevent double-deduction race conditions
+      if (count >= 2 && !billingStartedRef.current && user?.role === 'customer') {
+        const currentCredits = balances.customerCredits ?? user?.credits ?? 0
+        if (currentCredits <= 0) {
+          alert('Crediti insufficienti per iniziare la videochiamata. Ricarica il tuo account.')
+          navigate('/')
+          return
         }
+
         billingStartedRef.current = true
         socket.emit('start_call', { requestId: Number(requestId) })
       }
@@ -227,6 +228,15 @@ export default function CallPage() {
     })
 
     socket.on('error', ({ type, message }) => {
+      // SECURITY FIX: Force cleanup Jitsi BEFORE alert blocks the UI
+      if (jitsiApiRef.current && typeof jitsiApiRef.current.dispose === 'function') {
+        jitsiApiRef.current.dispose()
+        jitsiApiRef.current = null
+      }
+      if (jitsiRef.current) {
+        jitsiRef.current.innerHTML = ''
+      }
+
       if (type === 'insufficient_credits') {
         alert(message || 'Crediti insufficienti. Ricarica il tuo account per continuare.')
         navigate('/')
@@ -237,6 +247,15 @@ export default function CallPage() {
     })
 
     socket.on('session_ended', () => {
+      // SECURITY FIX: Force cleanup Jitsi BEFORE alert blocks the UI
+      if (jitsiApiRef.current && typeof jitsiApiRef.current.dispose === 'function') {
+        jitsiApiRef.current.dispose()
+        jitsiApiRef.current = null
+      }
+      if (jitsiRef.current) {
+        jitsiRef.current.innerHTML = ''
+      }
+
       alert('Sessione terminata (crediti esauriti o sessione chiusa).')
       navigate('/')
     })
@@ -301,13 +320,27 @@ export default function CallPage() {
 
   // Jitsi initialization
   useEffect(() => {
-    // SECURITY: Do not load Jitsi until session is confirmed active by server (or is calendar booking and active)
-    if (!room || !jitsiRef.current || !isSessionActive) return
+    if (!room || !jitsiRef.current) return
+
+    // SECURITY: Strictly block Jitsi for customers until server confirms credits/billing
+    // This prevents "Ghost Calls" where the video loads before the insufficient credit error arrives.
+    if (user?.role === 'customer' && !isSessionActive && !isCalendarBooking) {
+      console.log('[DEBUG-CLIENT] Waiting for session activation (Credit Check)...');
+      jitsiRef.current.innerHTML = `
+        <div class="flex flex-col items-center justify-center h-full bg-gray-900 text-white">
+          <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-white mb-4"></div>
+          <p class="text-lg font-semibold">Verifica crediti in corso...</p>
+          <p class="text-sm text-gray-400 mt-2">La videochiamata inizierà a breve.</p>
+        </div>
+      `;
+      return;
+    }
 
     // Get Jitsi domain from environment
     const jitsiDomainEnvRaw = typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_JITSI_DOMAIN
       ? String(import.meta.env.VITE_JITSI_DOMAIN).trim()
       : ''
+
 
     // Require VITE_JITSI_DOMAIN in remote builds
     if (!jitsiDomainEnvRaw) {

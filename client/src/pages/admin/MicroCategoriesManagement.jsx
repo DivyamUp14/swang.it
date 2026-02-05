@@ -294,23 +294,23 @@ export default function MicroCategoriesManagement() {
         <div className="space-y-6">
           {['coaching', 'cartomancy'].map(macro => (
             groupedCategories[macro] && (
-              <div key={macro} className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+              <div key={macro} className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden overflow-x-auto">
                 <div className="bg-gray-50 px-6 py-3 border-b border-gray-200">
                   <h2 className="text-lg font-semibold text-gray-900 capitalize">{macro}</h2>
                 </div>
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Verification</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Verification</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
                     {groupedCategories[macro].map(category => (
                       <tr key={category.id}>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
                           {editingId === category.id ? (
                             <input
                               type="text"
@@ -335,32 +335,47 @@ export default function MicroCategoriesManagement() {
                             </span>
                           )}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
+                        <td className="px-4 py-3 whitespace-nowrap">
                           {category.requires_verification === 1 ? (
                             <span className="px-2 py-1 text-xs rounded bg-yellow-100 text-yellow-800">Required</span>
                           ) : (
                             <span className="px-2 py-1 text-xs rounded bg-gray-100 text-gray-800">Not Required</span>
                           )}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
+                        <td className="px-4 py-3 whitespace-nowrap">
                           {category.is_archived === 1 ? (
                             <span className="px-2 py-1 text-xs rounded bg-red-100 text-red-800">Archived</span>
                           ) : (
                             <span className="px-2 py-1 text-xs rounded bg-green-100 text-green-800">Active</span>
                           )}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm">
+                        <td className="px-4 py-3 whitespace-nowrap text-sm">
                           <div className="flex gap-2">
                             {category.is_archived === 0 ? (
-                              <Button size="sm" variant="secondary" onClick={() => handleArchive(category.id)}>
+                              <Button
+                                size="sm"
+                                variant="secondary"
+                                className="!px-2 !py-1 !text-xs"
+                                onClick={() => handleArchive(category.id)}
+                              >
                                 Archive
                               </Button>
                             ) : (
-                              <Button size="sm" variant="secondary" onClick={() => handleUpdate(category.id, { is_archived: false })}>
+                              <Button
+                                size="sm"
+                                variant="secondary"
+                                className="!px-2 !py-1 !text-xs"
+                                onClick={() => handleUpdate(category.id, { is_archived: false })}
+                              >
                                 Restore
                               </Button>
                             )}
-                            <Button size="sm" variant="secondary" onClick={() => handleDelete(category.id)}>
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              className="!px-2 !py-1 !text-xs"
+                              onClick={() => handleDelete(category.id)}
+                            >
                               Delete
                             </Button>
                           </div>

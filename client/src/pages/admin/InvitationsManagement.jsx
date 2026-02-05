@@ -164,7 +164,7 @@ export default function InvitationsManagement() {
       </div>
 
       {/* Invitations List */}
-      <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+      <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden overflow-x-auto">
         <div className="px-6 py-4 border-b border-gray-200">
           <h2 className="text-xl font-semibold">Inviti Inviati</h2>
         </div>
@@ -177,11 +177,12 @@ export default function InvitationsManagement() {
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Token</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Scadenza</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Stato</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Data Invio</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Token</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Scadenza</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Stato</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Data Invio</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -190,14 +191,14 @@ export default function InvitationsManagement() {
                   const used = invitation.used
                   return (
                     <tr key={invitation.id}>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{invitation.email}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 font-mono">
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{invitation.email}</td>
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600 font-mono">
                         {invitation.token.substring(0, 16)}...
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
                         {formatDate(invitation.expires_at)}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="px-4 py-3 whitespace-nowrap">
                         {used ? (
                           <span className="px-2 py-1 text-xs rounded bg-green-100 text-green-800">
                             Utilizzato
@@ -212,8 +213,22 @@ export default function InvitationsManagement() {
                           </span>
                         )}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
                         {formatDate(invitation.created_at)}
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap text-sm">
+                        {!invitation.is_used && (
+                          <div className="flex gap-2 flex-nowrap">
+                            <Button
+                              size="sm"
+                              variant="danger"
+                              className="!px-2 !py-1 !text-xs"
+                              onClick={() => deleteInvitation(invitation.id)}
+                            >
+                              Revoke
+                            </Button>
+                          </div>
+                        )}
                       </td>
                     </tr>
                   )

@@ -141,33 +141,33 @@ export default function PayoutsManagement() {
         <div className="text-center py-12">Caricamento...</div>
       ) : (
         <>
-          <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+          <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Consultant</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Period</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Created</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Consultant</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Period</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Created</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {payouts.map(payout => (
                   <tr key={payout.id}>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{payout.id}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{payout.id}</td>
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
                       {payout.consultant_name || payout.consultant_email}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
                       {payout.period_month && payout.period_year
                         ? `${new Date(2000, payout.period_month - 1).toLocaleString('it-IT', { month: 'long' })} ${payout.period_year}`
                         : '—'}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">€{Number(payout.amount || 0).toFixed(2)}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">€{Number(payout.amount || 0).toFixed(2)}</td>
+                    <td className="px-4 py-3 whitespace-nowrap">
                       <span className={`px-2 py-1 text-xs rounded ${payout.status === 'paid' ? 'bg-green-100 text-green-800' :
                         payout.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
                           'bg-red-100 text-red-800'
@@ -175,16 +175,26 @@ export default function PayoutsManagement() {
                         {payout.status === 'paid' ? 'Paid' : payout.status === 'pending' ? 'Pending' : 'Rejected'}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
                       {new Date(payout.created_at).toLocaleDateString()}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                    <td className="px-4 py-3 whitespace-nowrap text-sm">
                       {payout.status === 'pending' && (
-                        <div className="flex flex-col gap-2">
-                          <Button size="sm" variant="primary" onClick={() => markAsPaid(payout.id)}>
+                        <div className="flex gap-2 flex-nowrap">
+                          <Button
+                            size="sm"
+                            variant="primary"
+                            className="!px-2 !py-1 !text-xs"
+                            onClick={() => markAsPaid(payout.id)}
+                          >
                             Mark as Paid
                           </Button>
-                          <Button size="sm" variant="secondary" onClick={() => rejectPayout(payout.id)}>
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            className="!px-2 !py-1 !text-xs"
+                            onClick={() => rejectPayout(payout.id)}
+                          >
                             Reject
                           </Button>
                         </div>

@@ -146,52 +146,53 @@ export default function ReviewsManagement() {
         <div className="text-center py-12">Caricamento...</div>
       ) : (
         <>
-          <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+          <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Customer</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Consultant</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Rating</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Comment</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Customer</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Consultant</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Rating</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Comment</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {reviews.map(review => (
                   <tr key={review.id} className={review.is_hidden ? 'bg-gray-100' : ''}>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{review.id}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{review.customer_email || 'N/A'}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{review.id}</td>
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{review.customer_email || 'N/A'}</td>
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
                       {review.consultant_name || review.consultant_email || 'N/A'}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
                       <div className="flex items-center">
                         <span className="text-yellow-400">★</span>
                         <span className="ml-1">{review.rating}/5</span>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-900 max-w-xs truncate">
+                    <td className="px-4 py-3 text-sm text-gray-900 max-w-xs truncate">
                       {review.comment || '-'}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-4 py-3 whitespace-nowrap">
                       {review.is_hidden ? (
                         <span className="px-2 py-1 text-xs rounded bg-red-100 text-red-800">Hidden</span>
                       ) : (
                         <span className="px-2 py-1 text-xs rounded bg-green-100 text-green-800">Visible</span>
                       )}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
                       {new Date(review.created_at).toLocaleDateString()}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                    <td className="px-4 py-3 whitespace-nowrap text-sm">
                       <div className="flex gap-2">
                         <Button
                           size="sm"
                           variant={review.is_hidden ? "primary" : "secondary"}
+                          className="!px-2 !py-1 !text-xs"
                           onClick={() => toggleHide(review.id, review.is_hidden)}
                         >
                           {review.is_hidden ? 'Show' : 'Hide'}
@@ -199,6 +200,7 @@ export default function ReviewsManagement() {
                         <Button
                           size="sm"
                           variant="secondary"
+                          className="!px-2 !py-1 !text-xs"
                           onClick={() => addNotes(review.id)}
                         >
                           Notes
@@ -206,6 +208,7 @@ export default function ReviewsManagement() {
                         <Button
                           size="sm"
                           variant="danger"
+                          className="!px-2 !py-1 !text-xs"
                           onClick={() => deleteReview(review.id)}
                         >
                           Delete

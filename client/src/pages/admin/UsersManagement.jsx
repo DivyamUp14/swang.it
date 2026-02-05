@@ -144,26 +144,26 @@ export default function UsersManagement() {
         <div className="text-center py-12">Caricamento...</div>
       ) : (
         <>
-          <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+          <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Role</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Credits</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Role</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Credits</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {users.map(user => (
                   <tr key={user.id}>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{user.id}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{user.email}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 capitalize">{user.role}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">€{Number(user.credits || 0).toFixed(2)}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{user.id}</td>
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{user.email}</td>
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 capitalize">{user.role}</td>
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">€{Number(user.credits || 0).toFixed(2)}</td>
+                    <td className="px-4 py-3 whitespace-nowrap">
                       <div className="flex flex-col gap-1">
                         {user.is_blocked && (
                           <span className="px-2 py-1 text-xs rounded bg-red-100 text-red-800">Blocked</span>
@@ -178,11 +178,12 @@ export default function UsersManagement() {
                         )}
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      <div className="flex gap-2 flex-wrap">
+                    <td className="px-4 py-3 whitespace-nowrap text-sm">
+                      <div className="flex gap-2 flex-nowrap">
                         <Button
                           size="sm"
                           variant="secondary"
+                          className="!px-2 !py-1 !text-xs"
                           onClick={() => setViewUserId(user.id)}
                           title="View Full Profile"
                         >
@@ -191,6 +192,7 @@ export default function UsersManagement() {
                         <Button
                           size="sm"
                           variant="primary"
+                          className="!px-2 !py-1 !text-xs"
                           onClick={() => {
                             const amount = parseFloat(prompt('Enter amount to add:'))
                             if (amount && amount > 0) {
@@ -204,6 +206,7 @@ export default function UsersManagement() {
                         <Button
                           size="sm"
                           variant="secondary"
+                          className="!px-2 !py-1 !text-xs"
                           onClick={() => {
                             const amount = parseFloat(prompt('Enter amount to deduct:'))
                             if (amount && amount > 0) {
@@ -217,6 +220,7 @@ export default function UsersManagement() {
                         <Button
                           size="sm"
                           variant="secondary"
+                          className="!px-2 !py-1 !text-xs"
                           onClick={() => {
                             window.open(`/admin/users/${user.id}/history`, '_blank')
                           }}
@@ -227,6 +231,7 @@ export default function UsersManagement() {
                           <Button
                             size="sm"
                             variant={user.is_blocked ? "primary" : "danger"}
+                            className="!px-2 !py-1 !text-xs"
                             onClick={() => toggleBlock(user.id, user.is_blocked)}
                           >
                             {user.is_blocked ? 'Unblock' : 'Block'}
@@ -236,6 +241,7 @@ export default function UsersManagement() {
                           <Button
                             size="sm"
                             variant="danger"
+                            className="!px-2 !py-1 !text-xs"
                             onClick={() => deleteUser(user.id)}
                             title="Elimina account definitivamente"
                           >

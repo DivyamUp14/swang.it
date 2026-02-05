@@ -142,13 +142,13 @@ export default function CustomerHome() {
   }, [selectedCategory, selectedMicroCategory])
 
   useEffect(() => {
-    loadConsultants(1)
+    loadConsultants(page);
     // Refresh consultant list every 10 seconds to update online status
     const interval = setInterval(() => {
       loadConsultants(page, selectedCategory, selectedMicroCategory);
     }, 10000);
     return () => clearInterval(interval);
-  }, [])
+  }, [page, selectedCategory, selectedMicroCategory]);
 
   const sendRequest = async (consultantId, type = 'chat') => {
     // CHAT NOW WORKS LIKE CALLS: All request types follow the same logic

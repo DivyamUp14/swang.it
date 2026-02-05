@@ -126,45 +126,46 @@ export default function DiscountCodesManagement() {
       {loading ? (
         <div className="text-center py-12">Caricamento...</div>
       ) : (
-        <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+        <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Code</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Value</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Uses</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Expires</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Code</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Value</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Uses</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Expires</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {codes.map(code => (
                 <tr key={code.id}>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-mono font-bold text-gray-900">{code.code}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 capitalize">{code.discount_type}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  <td className="px-4 py-3 whitespace-nowrap text-sm font-mono font-bold text-gray-900">{code.code}</td>
+                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 capitalize">{code.discount_type}</td>
+                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
                     {code.discount_type === 'percentage' ? `${code.discount_value}%` : `€${Number(code.discount_value || 0).toFixed(2)}`}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
                     {code.used_count || 0} / {code.max_uses || '∞'}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
                     {code.expires_at ? new Date(code.expires_at).toLocaleDateString() : 'Never'}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-4 py-3 whitespace-nowrap">
                     {code.is_active === 1 ? (
                       <span className="px-2 py-1 text-xs rounded bg-green-100 text-green-800">Active</span>
                     ) : (
                       <span className="px-2 py-1 text-xs rounded bg-gray-100 text-gray-800">Inactive</span>
                     )}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">
+                  <td className="px-4 py-3 whitespace-nowrap text-sm">
                     <div className="flex gap-2">
                       <Button
                         size="sm"
                         variant={code.is_active === 1 ? "secondary" : "primary"}
+                        className="!px-2 !py-1 !text-xs"
                         onClick={() => toggleActive(code.id, code.is_active === 1)}
                       >
                         {code.is_active === 1 ? 'Deactivate' : 'Activate'}
@@ -172,6 +173,7 @@ export default function DiscountCodesManagement() {
                       <Button
                         size="sm"
                         variant="danger"
+                        className="!px-2 !py-1 !text-xs"
                         onClick={() => deleteCode(code.id)}
                       >
                         Delete
