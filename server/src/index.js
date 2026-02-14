@@ -18,10 +18,10 @@ const JWT_SECRET = process.env.JWT_SECRET || 'dev_secret_change_me';
 const PORT = process.env.PORT || 4000;
 const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN || '';
 const CREDITS_PER_MINUTE = Number(process.env.CREDITS_PER_MINUTE || 5);
-const WELCOME_BONUS_CREDITS = 5; // €5 bonus for new customers
+const WELCOME_BONUS_CREDITS = 0; // Bonus removed
 const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || '';
 const STRIPE_CURRENCY = (process.env.STRIPE_CURRENCY || 'eur').toLowerCase();
-const ALLOWED_TOPUP_AMOUNTS = (process.env.TOPUP_AMOUNTS || '25,50,100')
+const ALLOWED_TOPUP_AMOUNTS = (process.env.TOPUP_AMOUNTS || '10,25,50,100')
   .split(',')
   .map(n => Number(n.trim()))
   .filter(n => n > 0);
@@ -1259,7 +1259,8 @@ function sanitizeUser(row) {
     nickname: row.nickname || null,
     country: row.country || null,
     city: row.city || null,
-    timezone: row.timezone || null
+    timezone: row.timezone || null,
+    has_topups: row.has_topups === 1 // Helper to check if user has purchased credits before
   };
 }
 
@@ -1342,9 +1343,9 @@ app.post('/api/auth/signup', async (req, res) => {
     }
 
     const password_hash = bcrypt.hashSync(password, 10);
-    // Welcome bonus: €5 (5 credits) for customers only, one-time
-    const initialCredits = role === 'customer' ? WELCOME_BONUS_CREDITS : 0;
-    const bonusGranted = role === 'customer' ? 1 : 0;
+    // Welcome bonus: Removed (previously 5 credits)
+    const initialCredits = 0;
+    const bonusGranted = 0;
 
     const stmt = db.prepare('INSERT INTO users (email, password_hash, role, credits, bonus_granted, full_name, phone, nickname) VALUES (?,?,?,?,?,?,?,?)');
     const info = await stmt.run(email, password_hash, role, initialCredits, bonusGranted, full_name.trim(), phone.trim(), nickname.trim());
@@ -1360,16 +1361,6 @@ app.post('/api/auth/signup', async (req, res) => {
       //   email: userRow.email,
       //   consultantName: null
       // })).catch(() => {});
-    }
-
-    if (role === 'customer') {
-      await recordTransaction(userRow.id, {
-        type: 'bonus',
-        amount: WELCOME_BONUS_CREDITS,
-        method: 'system',
-        status: 'completed',
-        description: 'Bonus di benvenuto'
-      });
     }
 
     const user = sanitizeUser(userRow);
@@ -1547,7 +1538,11 @@ app.post('/api/auth/reset-password', async (req, res) => {
 // Me endpoint
 app.get('/api/me', authMiddleware, async (req, res) => {
   try {
-    const row = await db.prepare('SELECT id, email, role, credits, is_online, bonus_granted, full_name, phone, nickname, country, city, timezone FROM users WHERE id = ?').get(req.user.id);
+    const row = await db.prepare(`
+      SELECT u.*, 
+      (SELECT COUNT(*) FROM transactions t WHERE t.user_id = u.id AND t.type = 'topup' AND t.status = 'succeeded') > 0 as has_topups 
+      FROM users u WHERE u.id = ?
+    `).get(req.user.id);
     if (!row) return res.status(404).json({ error: 'Not found' });
 
     const user = sanitizeUser(row);
@@ -1576,6 +1571,17 @@ app.post('/api/payments/create-intent', authMiddleware, async (req, res) => {
 
   try {
     const amountInMinor = Math.round(numericAmount * 100);
+
+    // FIRST-TIME OFFER LOGIC: Buy €10 get 15 Credits
+    if (numericAmount === 10) {
+      // Check if user has any completed top-up transactions
+      const existingTopups = await db.prepare("SELECT COUNT(*) as count FROM transactions WHERE user_id = ? AND type = 'topup' AND status = 'succeeded'").get(req.user.id);
+
+      if (existingTopups && existingTopups.count > 0) {
+        return res.status(400).json({ error: 'Promo disponibile solo per il primo acquisto' });
+      }
+    }
+
     const intent = await stripe.paymentIntents.create({
       amount: amountInMinor,
       currency: STRIPE_CURRENCY,
@@ -1584,7 +1590,8 @@ app.post('/api/payments/create-intent', authMiddleware, async (req, res) => {
       metadata: {
         userId: String(req.user.id),
         type: 'topup',
-        amount_eur: numericAmount.toFixed(2)
+        amount_eur: numericAmount.toFixed(2),
+        isFirstTimePromo: numericAmount === 10 ? 'true' : 'false'
       }
     });
 
@@ -1618,7 +1625,15 @@ app.post('/api/payments/confirm', authMiddleware, async (req, res) => {
 
     const amountReceived = intent.amount_received || intent.amount || 0;
     const transactionAmount = intent.metadata?.amount_eur ? Number(intent.metadata.amount_eur) : amountReceived / 100;
-    const creditsToAdd = Math.round(transactionAmount);
+
+    // CALCULATE CREDITS TO ADD
+    // If it's the €10 promo, give 15 credits. Otherwise 1:1 ratio.
+    let creditsToAdd = Math.round(transactionAmount);
+
+    if (transactionAmount === 10 || intent.metadata?.isFirstTimePromo === 'true') {
+      creditsToAdd = 15; // BONUS APPLIED
+    }
+
     if (!creditsToAdd) {
       console.error(`[PAYMENT_AMOUNT_ERROR] [${new Date().toISOString()}] Intent ${paymentIntentId}: rounded credits is 0. Amount: ${transactionAmount}`);
       return res.status(400).json({ error: 'Unable to determine credit amount' });
@@ -1637,11 +1652,11 @@ app.post('/api/payments/confirm', authMiddleware, async (req, res) => {
           amount: transactionAmount,
           method,
           status: intent.status,
-          description: `Ricarica credito via Stripe (€${transactionAmount.toFixed(2)})`,
+          description: transactionAmount === 10 ? `Ricarica Promo Benvenuto (€10 -> 15 crediti)` : `Ricarica credito via Stripe (€${transactionAmount.toFixed(2)})`,
           reference: paymentIntentId,
-          metadata: { paymentIntentId }
+          metadata: { paymentIntentId, creditsAdded: creditsToAdd, isPromo: transactionAmount === 10 }
         });
-        console.log(`[PAYMENT_SUCCESS] [${new Date().toISOString()}] User ${req.user.id} credited €${transactionAmount} (Intent: ${paymentIntentId})`);
+        console.log(`[PAYMENT_SUCCESS] [${new Date().toISOString()}] User ${req.user.id} credited ${creditsToAdd} credits for €${transactionAmount} (Intent: ${paymentIntentId})`);
       } else {
         console.log(`[PAYMENT_IDEMPOTENCY] [${new Date().toISOString()}] Transaction ${paymentIntentId} already processed for User ${req.user.id}`);
       }
@@ -5893,7 +5908,7 @@ app.get('/api/admin/payouts', authMiddleware, requireAdmin, async (req, res) => 
     let query = `
       SELECT pr.*, u.email as consultant_email, cp.name as consultant_name
       FROM payout_requests pr
-      JOIN users u ON pr.consultant_id = u.id
+      LEFT JOIN users u ON pr.consultant_id = u.id
       LEFT JOIN consultant_profiles cp ON pr.consultant_id = cp.consultant_id
       WHERE 1=1
     `;
@@ -6680,9 +6695,9 @@ app.get('/api/admin/sessions', authMiddleware, requireAdmin, async (req, res) =>
     const { status, customerId, consultantId, type, page = 1, pageSize = 50 } = req.query;
     let baseQuery = `
       FROM sessions s
-      JOIN requests r ON s.request_id = r.id
-      JOIN users u_customer ON r.customer_id = u_customer.id
-      JOIN users u_consultant ON r.consultant_id = u_consultant.id
+      LEFT JOIN requests r ON s.request_id = r.id
+      LEFT JOIN users u_customer ON r.customer_id = u_customer.id
+      LEFT JOIN users u_consultant ON r.consultant_id = u_consultant.id
       WHERE 1=1
     `;
     const params = [];

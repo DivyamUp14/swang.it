@@ -49,21 +49,21 @@ const SignupModal = ({ isOpen, onClose, onSwitchToLogin }) => {
 
       <div className="mb-6">
         <h3 className="text-lg font-bold text-blue-600 mb-2">
-          Sign up and take advantage of 5 minutes of free consultation
+          Sign up and connect with top professionals
         </h3>
         <p className="text-sm text-gray-600 mb-4">
           to find answers to your questions
         </p>
-          <div className="space-y-2 text-sm text-gray-700">
-            <div className="flex items-start space-x-2">
-              <HiArrowRight className="w-5 h-5 text-black mt-0.5" />
-              <span>No credit card required</span>
-            </div>
-            <div className="flex items-start space-x-2">
-              <HiArrowRight className="w-5 h-5 text-black mt-0.5" />
-              <span>Confidential consultations</span>
-            </div>
+        <div className="space-y-2 text-sm text-gray-700">
+          <div className="flex items-start space-x-2">
+            <HiArrowRight className="w-5 h-5 text-black mt-0.5" />
+            <span>No credit card required</span>
           </div>
+          <div className="flex items-start space-x-2">
+            <HiArrowRight className="w-5 h-5 text-black mt-0.5" />
+            <span>Confidential consultations</span>
+          </div>
+        </div>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">

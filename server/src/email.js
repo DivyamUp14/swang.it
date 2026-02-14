@@ -96,10 +96,10 @@ const buildWelcomeEmailHtml = (email) => {
 
                   <div style="border-left:4px solid #2563eb; padding-left:16px; margin:32px 0;">
                     <p style="font-size:16px; color:#1f2937; margin:0 0 12px 0;">
-                      ✨ <strong>Inizia subito e approfitta del tuo primo consulto gratuito!</strong>
+                      ✨ <strong>Offerta esclusiva di benvenuto!</strong>
                     </p>
                     <p style="font-size:15px; color:#4b5563; margin:0;">
-                      Hai già <strong>5 minuti omaggio</strong> disponibili sul tuo account — usali ora per conoscere il tuo primo professionista.
+                      Approfitta della promo speciale per il tuo primo acquisto: <strong>acquista €10 e ricevi 15 crediti</strong>.
                     </p>
                   </div>
 
@@ -139,7 +139,7 @@ Nel tuo profilo troverai:
 - La possibilità di ricaricare crediti e salvare il tuo metodo di pagamento in sicurezza.
 - L’accesso diretto ai consulenti disponibili in tempo reale o su appuntamento.
 
-Inizia subito: hai già 5 minuti omaggio disponibili sul tuo account.
+Inizia subito con un'offerta esclusiva: acquista il pacchetto speciale di benvenuto da €10 e ricevi 15 crediti!
 
 Accedi al tuo account qui: ${accountUrl}
 

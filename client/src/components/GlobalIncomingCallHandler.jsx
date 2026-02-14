@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { io } from 'socket.io-client'
 import { useAuth } from '../auth/AuthContext.jsx'
 import IncomingCallModal from './modals/IncomingCallModal.jsx'
+import audioManager from '../utils/AudioContextManager.js'
 
 /**
  * Global component that handles incoming call notifications for consultants
@@ -22,6 +23,20 @@ export default function GlobalIncomingCallHandler() {
     if ((apiBase || '').includes('ngrok')) base['ngrok-skip-browser-warning'] = 'true'
     commonHeadersRef.current = base
   }, [token, apiBase])
+
+  // UNLOCK AUDIO CONTEXT ON MOUNT (add global listener)
+  useEffect(() => {
+    const unlockAudio = () => {
+      audioManager.unlock()
+      // Optional: remove listener after success, but keeping it ensures re-unlock if suspended
+    }
+    window.addEventListener('click', unlockAudio)
+    window.addEventListener('touchstart', unlockAudio)
+    return () => {
+      window.removeEventListener('click', unlockAudio)
+      window.removeEventListener('touchstart', unlockAudio)
+    }
+  }, [])
 
   // Initialize Socket.IO for real-time notifications (only for consultants)
   useEffect(() => {
@@ -65,6 +80,8 @@ export default function GlobalIncomingCallHandler() {
                 type: requestType
               }
             })
+            // PLAY ROBUST RINGTONE IMMEDIATELY
+            audioManager.playRingtone()
           }
         }
       } catch (e) {
@@ -77,6 +94,7 @@ export default function GlobalIncomingCallHandler() {
       // Close modal if open
       setIncomingCallModal(prev => {
         if (prev.isOpen && prev.requestData && (prev.requestData.id === data.requestId || prev.requestData.id === data.id)) {
+          audioManager.stopRingtone() // STOP RINGING
           return { isOpen: false, requestData: null }
         }
         return prev
@@ -110,6 +128,7 @@ export default function GlobalIncomingCallHandler() {
         const data = await res.json()
         // Close modal
         setIncomingCallModal({ isOpen: false, requestData: null })
+        audioManager.stopRingtone() // STOP RINGING
 
         // Navigate to call/chat screen based on type
         const requestType = incomingCallModal.requestData?.type || 'chat'
@@ -123,6 +142,7 @@ export default function GlobalIncomingCallHandler() {
       console.error('Error accepting request:', error)
       // Close modal even on error
       setIncomingCallModal({ isOpen: false, requestData: null })
+      audioManager.stopRingtone() // STOP RINGING
     }
   }
 
@@ -143,6 +163,7 @@ export default function GlobalIncomingCallHandler() {
     } finally {
       // Always close modal after decline
       setIncomingCallModal({ isOpen: false, requestData: null })
+      audioManager.stopRingtone() // STOP RINGING
     }
   }
 

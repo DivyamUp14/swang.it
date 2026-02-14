@@ -151,6 +151,18 @@ export default function CustomerHome() {
   }, [page, selectedCategory, selectedMicroCategory]);
 
   const sendRequest = async (consultantId, type = 'chat') => {
+    // NEW: Pre-call Balance Check
+    const targetConsultant = consultants.find(c => c.id === consultantId)
+    let requiredCredits = 0.5; // default for chat
+    if (type === 'voice') requiredCredits = Number(targetConsultant?.voice_price || 5);
+    if (type === 'video') requiredCredits = Number(targetConsultant?.video_price || 5);
+    if (type === 'chat') requiredCredits = Number(targetConsultant?.chat_price || 0.1);
+
+    if (user.credits < requiredCredits) {
+      alert(`Credito insufficiente per avviare una richiesta ${type === 'chat' ? 'di chat' : type === 'voice' ? 'vocale' : 'video'}. Ricarica il portafoglio.`);
+      return;
+    }
+
     // CHAT NOW WORKS LIKE CALLS: All request types follow the same logic
     // Check for pending request first
     const pendingRequest = myRequests.find(r => r.consultant_id === consultantId && r.status === 'pending')

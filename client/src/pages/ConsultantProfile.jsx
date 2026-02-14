@@ -209,6 +209,16 @@ const ConsultantProfile = () => {
       alert('Solo i clienti possono inviare richieste');
       return;
     }
+    // NEW: Pre-call Balance Check
+    let requiredCredits = 0.5; // default for chat
+    if (type === 'voice') requiredCredits = Number(consultant?.voice_price || 5);
+    if (type === 'video') requiredCredits = Number(consultant?.video_price || 5);
+    if (type === 'chat') requiredCredits = Number(consultant?.chat_price || 0.1);
+
+    if (user.credits < requiredCredits) {
+      alert(`Credito insufficiente per avviare una richiesta ${type === 'chat' ? 'di chat' : type === 'voice' ? 'vocale' : 'video'}. Ricarica il portafoglio.`);
+      return;
+    }
 
     // PERSISTENT CHAT SESSIONS: For chat, check if persistent session exists and open directly
     if (type === 'chat') {

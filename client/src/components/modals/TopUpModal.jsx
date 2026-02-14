@@ -41,7 +41,13 @@ function StripeTopUpContent({ isOpen, onClose, currentBalance }) {
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
 
-  const amounts = [25, 50, 100];
+  const amounts = useMemo(() => {
+    // Show €10 offer ONLY if user has no previous top-ups
+    if (!user?.has_topups) {
+      return [10, 25, 50, 100];
+    }
+    return [25, 50, 100];
+  }, [user]);
 
   const baseHeaders = useMemo(() => {
     const headers = {};
@@ -49,17 +55,6 @@ function StripeTopUpContent({ isOpen, onClose, currentBalance }) {
     if ((apiBase || '').includes('ngrok')) headers['ngrok-skip-browser-warning'] = 'true';
     return headers;
   }, [token, apiBase]);
-
-  useEffect(() => {
-    if (!isOpen) {
-      setActiveTab('recharge');
-      setSelectedAmount(null);
-      setAgreementAccepted(false);
-      setIsProcessing(false);
-      setError(null);
-      setSuccess(false);
-    }
-  }, [isOpen]);
 
   // Early return if Stripe is not available
   if (!stripe || !elements) {
@@ -176,8 +171,8 @@ function StripeTopUpContent({ isOpen, onClose, currentBalance }) {
         <button
           onClick={() => setActiveTab('recharge')}
           className={`px-6 py-3 font-medium text-sm transition-colors ${activeTab === 'recharge'
-              ? 'text-blue-600 border-b-2 border-blue-600'
-              : 'text-gray-600 hover:text-gray-900'
+            ? 'text-blue-600 border-b-2 border-blue-600'
+            : 'text-gray-600 hover:text-gray-900'
             }`}
         >
           RICARICA
@@ -185,8 +180,8 @@ function StripeTopUpContent({ isOpen, onClose, currentBalance }) {
         <button
           onClick={() => setActiveTab('payment')}
           className={`px-6 py-3 font-medium text-sm transition-colors ${activeTab === 'payment'
-              ? 'text-blue-600 border-b-2 border-blue-600'
-              : 'text-gray-600 hover:text-gray-900'
+            ? 'text-blue-600 border-b-2 border-blue-600'
+            : 'text-gray-600 hover:text-gray-900'
             }`}
         >
           PAGAMENTO
@@ -202,146 +197,150 @@ function StripeTopUpContent({ isOpen, onClose, currentBalance }) {
             </p>
           </div>
 
-          <div className="grid grid-cols-3 gap-4 mb-6">
+          <div className="grid grid-cols-2 gap-4 mb-6">
             {amounts.map((amount) => (
               <button
                 key={amount}
                 onClick={() => setSelectedAmount(amount)}
                 className={`
-                  relative p-6 border-2 rounded-lg transition-all
+                  relative p-4 border-2 rounded-xl transition-all flex flex-col items-center justify-center min-h-[100px]
                   ${selectedAmount === amount
-                    ? 'border-pink-500 bg-pink-50'
-                    : 'border-gray-300 hover:border-gray-400'
+                    ? 'border-blue-600 bg-blue-50 shadow-md ring-1 ring-blue-600'
+                    : amount === 10
+                      ? 'border-purple-300 bg-purple-50 hover:border-purple-400'
+                      : 'border-gray-200 hover:border-gray-300 bg-white hover:bg-gray-50'
                   }
                 `}
               >
                 {selectedAmount === amount && (
-                  <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 w-6 h-6 bg-pink-500 rounded-full flex items-center justify-center">
+                  <div className="absolute -top-3 -right-3 w-7 h-7 bg-blue-600 rounded-full flex items-center justify-center shadow-sm z-10">
                     <HiCheck className="w-4 h-4 text-white" />
                   </div>
                 )}
+
+                {amount === 10 && (
+                  <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-[10px] font-bold px-3 py-0.5 rounded-full shadow-sm whitespace-nowrap">
+                    OFFERTA BENVENUTO
+                  </div>
+                )}
+
+                {amount === 50 && (
+                  <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-green-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">
+                    POPOLARE
+                  </div>
+                )}
+
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-gray-900">€{amount}</div>
-                  {amount === 50 && (
-                    <div className="text-xs text-gray-500 mt-1">Più Popolare</div>
-                  )}
+                  <div className={`text-2xl font-bold ${amount === 10 ? 'text-purple-700' : 'text-gray-900'}`}>€{amount}</div>
+                  <div className={`text-xs font-medium mt-1 ${amount === 10 ? 'text-purple-600' : 'text-gray-500'}`}>
+                    {amount === 10 ? 'Ricevi 15 crediti' : `${amount} crediti`}
+                  </div>
                 </div>
               </button>
             ))}
           </div>
 
-          {selectedAmount && (
-            <Button
-              variant="primary"
-              size="lg"
-              className="w-full mb-4"
-              onClick={() => setActiveTab('payment')}
-            >
-              CONFERMA LA MIA SCELTA
-            </Button>
-          )}
+          {
+            selectedAmount && (
+              <Button
+                variant="primary"
+                size="lg"
+                className="w-full mb-4"
+                onClick={() => setActiveTab('payment')}
+              >
+                CONFERMA LA MIA SCELTA
+              </Button>
+            )
+          }
 
           {/* Payment Methods */}
           <div className="flex items-center justify-center space-x-4 mb-4">
             <img src={visaLogo} alt="Visa" className="h-8" />
             <img src={amexLogo} alt="Amex" className="h-8" />
-            {/* <img src={paypalLogo} alt="PayPal" className="h-8" /> */}
           </div>
 
           <p className="text-xs text-center text-gray-500">
             Pagamento 100% Sicuro ✓ Norton by Symantec
           </p>
-        </div>
-      )}
+        </div >
+      )
+      }
 
-      {activeTab === 'payment' && selectedAmount && (
-        <div>
-          <h3 className="text-lg font-bold text-gray-900 mb-4">
-            Ricarica il mio account con €{Number(selectedAmount || 0).toFixed(2)}
-          </h3>
+      {
+        activeTab === 'payment' && selectedAmount && (
+          <div>
+            <h3 className="text-lg font-bold text-gray-900 mb-4">
+              {selectedAmount === 10
+                ? `Ottieni 15 Crediti per €10.00`
+                : `Ricarica €${Number(selectedAmount).toFixed(2)}`
+              }
+            </h3>
 
-          {/* Credit Card Payment */}
-          <div className="mb-6">
-            <div className="flex items-center justify-between mb-4">
-              <h4 className="font-semibold text-gray-900">Carta di Credito/Prepagata</h4>
-              <div className="flex space-x-2">
-                <img src={visaLogo} alt="Visa" className="h-6" />
-                <img src={amexLogo} alt="Amex" className="h-6" />
+            {/* Credit Card Payment */}
+            <div className="mb-6">
+              <div className="flex items-center justify-between mb-4">
+                <h4 className="font-semibold text-gray-900">Carta di Credito/Prepagata</h4>
+                <div className="flex space-x-2">
+                  <img src={visaLogo} alt="Visa" className="h-6" />
+                  <img src={amexLogo} alt="Amex" className="h-6" />
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-white focus-within:ring-2 focus-within:ring-blue-500">
+                  <CardElement options={cardElementOptions} />
+                </div>
+                <p className="text-xs text-gray-500">
+                  I pagamenti sono elaborati in modo sicuro tramite Stripe.
+                </p>
               </div>
             </div>
 
-            <div className="space-y-4">
-              <div className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-white focus-within:ring-2 focus-within:ring-blue-500">
-                <CardElement options={cardElementOptions} />
-              </div>
-              <p className="text-xs text-gray-500">
-                I pagamenti sono elaborati in modo sicuro tramite Stripe.
-              </p>
+            {/* Terms */}
+            <div className="mb-6">
+              <label className="flex items-start space-x-2">
+                <input
+                  type="checkbox"
+                  className="mt-1"
+                  checked={agreementAccepted}
+                  onChange={(e) => setAgreementAccepted(e.target.checked)}
+                />
+                <span className="text-sm text-gray-600">
+                  Ho letto e accetto i{' '}
+                  <a href="/terms" className="text-blue-600 hover:underline">Termini Generali di Servizio</a>
+                </span>
+              </label>
             </div>
-          </div>
 
-          {/* PayPal Option */}
-          {/* <div className="mb-6">
-            <button
-              type="button"
-              onClick={() => setError('Il pagamento con PayPal sarà disponibile a breve. Al momento utilizza la carta di credito.')}
-              className="w-full flex items-center justify-between p-4 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+            {error && (
+              <div className="mb-4 px-4 py-3 rounded-lg border border-red-200 bg-red-50 text-sm text-red-600">
+                {error}
+              </div>
+            )}
+
+            {success && (
+              <div className="mb-4 px-4 py-3 rounded-lg border border-green-200 bg-green-50 text-sm text-green-600">
+                Pagamento completato! Il tuo saldo sarà aggiornato tra pochi secondi.
+              </div>
+            )}
+
+            <Button
+              variant="primary"
+              size="lg"
+              className="w-full mb-4"
+              onClick={handleConfirm}
+              disabled={isProcessing || !stripe}
             >
-              <div className="flex items-center space-x-3">
-                <img src={paypalLogo} alt="PayPal" className="h-8" />
-                <span className="font-medium text-gray-900">PayPal</span>
-              </div>
-              <FaChevronRight className="w-5 h-5 text-gray-400" />
-            </button>
-            <p className="mt-2 text-xs text-gray-500">
-              PayPal sarà disponibile a breve. Attualmente è attivo il pagamento con carta.
+              {isProcessing ? 'Elaborazione...' : 'CONFERMA'}
+            </Button>
+
+            <p className="text-xs text-center text-gray-500">
+              Pagamento 100% Sicuro ✓ Norton by Symantec
             </p>
-          </div> */}
-
-          {/* Terms */}
-          <div className="mb-6">
-            <label className="flex items-start space-x-2">
-              <input
-                type="checkbox"
-                className="mt-1"
-                checked={agreementAccepted}
-                onChange={(e) => setAgreementAccepted(e.target.checked)}
-              />
-              <span className="text-sm text-gray-600">
-                Ho letto e accetto i{' '}
-                <a href="/terms" className="text-blue-600 hover:underline">Termini Generali di Servizio</a>
-              </span>
-            </label>
           </div>
-
-          {error && (
-            <div className="mb-4 px-4 py-3 rounded-lg border border-red-200 bg-red-50 text-sm text-red-600">
-              {error}
-            </div>
-          )}
-
-          {success && (
-            <div className="mb-4 px-4 py-3 rounded-lg border border-green-200 bg-green-50 text-sm text-green-600">
-              Pagamento completato! Il tuo saldo sarà aggiornato tra pochi secondi.
-            </div>
-          )}
-
-          <Button
-            variant="primary"
-            size="lg"
-            className="w-full mb-4"
-            onClick={handleConfirm}
-            disabled={isProcessing || !stripe}
-          >
-            {isProcessing ? 'Elaborazione...' : 'CONFERMA'}
-          </Button>
-
-          <p className="text-xs text-center text-gray-500">
-            Pagamento 100% Sicuro ✓ Norton by Symantec
-          </p>
-        </div>
-      )}
-    </Modal>
+        )
+      }
+    </Modal >
   );
 }
 

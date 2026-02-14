@@ -123,7 +123,7 @@ export default function SignupPage() {
             />
           </div>
           <h2 className="text-2xl font-bold text-blue-600 mb-2">
-            Registrati e approfitta di 5 minuti di consultazione gratuita
+            Registrati e connettiti con i migliori professionisti
           </h2>
           <p className="text-sm text-gray-600 mb-4">
             per trovare risposte alle tue domande

@@ -393,6 +393,17 @@ const HomePage = () => {
                     return;
                   }
 
+                  // NEW: Pre-call Balance Check
+                  let requiredCredits = 0.5; // default for chat
+                  if (type === 'voice') requiredCredits = Number(consultant?.voice_price || 5);
+                  if (type === 'video') requiredCredits = Number(consultant?.video_price || 5);
+                  if (type === 'chat') requiredCredits = Number(consultant?.chat_price || 0.1);
+
+                  if (user.credits < requiredCredits) {
+                    alert(`Credito insufficiente per avviare una richiesta ${type === 'chat' ? 'di chat' : type === 'voice' ? 'vocale' : 'video'}. Ricarica il portafoglio.`);
+                    return;
+                  }
+
                   // Check if there's a pending request
                   const pendingRequest = myRequests.find(r => r.consultant_id === consultantId && r.status === 'pending');
                   if (pendingRequest) {
