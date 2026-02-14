@@ -41,6 +41,7 @@ export default function MyAccount() {
   const [savedCard, setSavedCard] = useState(null)
   const [reviews, setReviews] = useState([])
   const [favorites, setFavorites] = useState([])
+  const [showCityDropdown, setShowCityDropdown] = useState(false)
 
   // User profile data
   const [profileData, setProfileData] = useState({
@@ -311,17 +312,56 @@ export default function MyAccount() {
                         <label className="block text-sm font-medium text-gray-700 mb-2">
                           Città <span className="text-red-500">*</span>
                         </label>
-                        <select
-                          className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border"
-                          value={profileData.city}
-                          onChange={handleCityChange}
-                          disabled={!profileData.country}
-                        >
-                          <option value="">Seleziona Città</option>
-                          {profileData.country && City.getCitiesOfCountry(getCountryCode(profileData.country)).map(c => (
-                            <option key={c.name} value={c.name}>{c.name}</option>
-                          ))}
-                        </select>
+                        {/* City Searchable Input */}
+                        <div className="relative">
+                          <Input
+                            type="text"
+                            className="!w-full !rounded-md !border-gray-300 !shadow-sm !focus:border-blue-500 !focus:ring-blue-500 !text-sm !p-2 !border"
+                            value={profileData.city}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setProfileData({ ...profileData, city: val });
+                              // Reset timezone if city changes manually to something invalid, but we'll try to match exact first
+                              // Actually, better to just let them type and we try to match on blur or selection
+                            }}
+                            onFocus={() => setShowCityDropdown(true)}
+                            // We use a custom dropdown, so handle blur carefully (might need timeout to allow click)
+                            onBlur={() => setTimeout(() => setShowCityDropdown(false), 200)}
+                            placeholder={profileData.country ? "Inizia a digitare la città..." : "Seleziona prima il paese"}
+                            disabled={!profileData.country}
+                          />
+                          {showCityDropdown && profileData.country && profileData.city && (
+                            <div className="absolute z-10 w-full bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto mt-1">
+                              {City.getCitiesOfCountry(getCountryCode(profileData.country))
+                                .filter(c => c.name.toLowerCase().includes(profileData.city.toLowerCase()))
+                                .slice(0, 50) // Limit to 50 results
+                                .map(c => (
+                                  <div
+                                    key={c.name}
+                                    className="px-4 py-2 hover:bg-gray-100 cursor-pointer text-sm"
+                                    onClick={() => {
+                                      setProfileData(prev => {
+                                        let detectedTimezone = prev.timezone;
+                                        try {
+                                          const foundTz = tz(Number(c.latitude), Number(c.longitude));
+                                          if (foundTz) detectedTimezone = foundTz;
+                                        } catch (err) { }
+                                        return { ...prev, city: c.name, timezone: detectedTimezone };
+                                      });
+                                      setShowCityDropdown(false);
+                                    }}
+                                  >
+                                    {c.name}
+                                  </div>
+                                ))}
+                              {City.getCitiesOfCountry(getCountryCode(profileData.country))
+                                .filter(c => c.name.toLowerCase().includes(profileData.city.toLowerCase()))
+                                .length === 0 && (
+                                  <div className="px-4 py-2 text-sm text-gray-500">Nessuna città trovata</div>
+                                )}
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>

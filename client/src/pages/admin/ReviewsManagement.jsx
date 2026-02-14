@@ -10,6 +10,8 @@ export default function ReviewsManagement() {
   const [page, setPage] = useState(1)
   const [total, setTotal] = useState(0)
   const [filters, setFilters] = useState({ consultantId: '', customerId: '', isHidden: '' })
+  const [editModal, setEditModal] = useState({ open: false, review: null })
+  const [editForm, setEditForm] = useState({ rating: 5, comment: '', reply: '' })
 
   useEffect(() => {
     loadReviews()
@@ -43,10 +45,11 @@ export default function ReviewsManagement() {
     try {
       const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }
       if ((apiBase || '').includes('ngrok')) headers['ngrok-skip-browser-warning'] = 'true'
-      const res = await fetch(`${apiBase}/api/admin/reviews/${reviewId}/hide`, {
+      // Use general PUT endpoint
+      const res = await fetch(`${apiBase}/api/admin/reviews/${reviewId}`, {
         method: 'PUT',
         headers,
-        body: JSON.stringify({ isHidden: !currentlyHidden })
+        body: JSON.stringify({ is_hidden: !currentlyHidden })
       })
       if (res.ok) {
         alert(`Review ${currentlyHidden ? 'shown' : 'hidden'} successfully`)
@@ -84,15 +87,16 @@ export default function ReviewsManagement() {
 
   const addNotes = async (reviewId) => {
     const notes = prompt('Enter moderation notes:')
-    if (!notes || !notes.trim()) return
+    if (notes === null) return // Cancelled
 
     try {
       const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }
       if ((apiBase || '').includes('ngrok')) headers['ngrok-skip-browser-warning'] = 'true'
-      const res = await fetch(`${apiBase}/api/admin/reviews/${reviewId}/notes`, {
-        method: 'POST',
+      // Use general PUT endpoint
+      const res = await fetch(`${apiBase}/api/admin/reviews/${reviewId}`, {
+        method: 'PUT',
         headers,
-        body: JSON.stringify({ notes: notes.trim() })
+        body: JSON.stringify({ moderation_notes: notes.trim() })
       })
       if (res.ok) {
         alert('Moderation notes added successfully')
@@ -104,6 +108,68 @@ export default function ReviewsManagement() {
     } catch (error) {
       alert('Error adding notes')
     }
+  }
+
+  const handleEditClick = (review) => {
+    setEditModal({ open: true, review })
+    setEditForm({
+      rating: review.rating,
+      comment: review.comment || '',
+      reply: review.reply || ''
+    })
+  }
+
+  const handleEditSubmit = async () => {
+    if (!editModal.review) return
+
+    try {
+      const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }
+      if ((apiBase || '').includes('ngrok')) headers['ngrok-skip-browser-warning'] = 'true'
+
+      const res = await fetch(`${apiBase}/api/admin/reviews/${editModal.review.id}`, {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify({
+          rating: Number(editForm.rating),
+          comment: editForm.comment,
+          reply: editForm.reply
+        })
+      })
+
+      if (res.ok) {
+        // Update local state without full reload
+        setReviews(reviews.map(r =>
+          r.id === editModal.review.id
+            ? { ...r, rating: Number(editForm.rating), comment: editForm.comment, reply: editForm.reply }
+            : r
+        ))
+        setEditModal({ open: false, review: null })
+        alert('Review updated successfully')
+      } else {
+        const error = await res.json().catch(() => ({}))
+        alert(error.error || 'Failed to update review')
+      }
+    } catch (error) {
+      alert('Error updating review')
+    }
+  }
+
+  // Helper to format name cleanly and hide fake emails
+  const formatName = (review) => {
+    if (review.customer_nickname) return review.customer_nickname
+    const email = review.customer_email || ''
+    if (email.startsWith('fake_')) {
+      // Extract name between 'fake_' and '_' or '@'
+      // e.g. fake_silvia_sun_123@... -> silvia_sun -> Silvia Sun
+      const parts = email.split('@')[0].split('_')
+      if (parts.length >= 3) {
+        // fake, name, timestamp...
+        // remove first (fake) and last (timestamp)
+        return parts.slice(1, parts.length - 1).map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(' ')
+      }
+      return 'Cliente Test'
+    }
+    return email || 'N/A'
   }
 
   return (
@@ -164,7 +230,9 @@ export default function ReviewsManagement() {
                 {reviews.map(review => (
                   <tr key={review.id} className={review.is_hidden ? 'bg-gray-100' : ''}>
                     <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{review.id}</td>
-                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{review.customer_email || 'N/A'}</td>
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                      {formatName(review)}
+                    </td>
                     <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
                       {review.consultant_name || review.consultant_email || 'N/A'}
                     </td>
@@ -174,7 +242,7 @@ export default function ReviewsManagement() {
                         <span className="ml-1">{review.rating}/5</span>
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-900 max-w-xs truncate">
+                    <td className="px-4 py-3 text-sm text-gray-900 max-w-xs truncate" title={review.comment || ''}>
                       {review.comment || '-'}
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
@@ -189,6 +257,14 @@ export default function ReviewsManagement() {
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap text-sm">
                       <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          className="!px-2 !py-1 !text-xs"
+                          onClick={() => handleEditClick(review)}
+                        >
+                          Edit
+                        </Button>
                         <Button
                           size="sm"
                           variant={review.is_hidden ? "primary" : "secondary"}
@@ -234,8 +310,65 @@ export default function ReviewsManagement() {
           </div>
         </>
       )}
-    </div>
 
+      {/* Edit Modal */}
+      {editModal.open && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-lg w-full p-6">
+            <h3 className="text-lg font-bold mb-4">Edit Review #{editModal.review.id}</h3>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Rating</label>
+                <select
+                  value={editForm.rating}
+                  onChange={e => setEditForm({ ...editForm, rating: e.target.value })}
+                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+                >
+                  {[1, 2, 3, 4, 5].map(r => <option key={r} value={r}>{r}</option>)}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Comment</label>
+                <textarea
+                  value={editForm.comment}
+                  onChange={e => setEditForm({ ...editForm, comment: e.target.value })}
+                  rows={4}
+                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Reply</label>
+                <textarea
+                  value={editForm.reply}
+                  onChange={e => setEditForm({ ...editForm, reply: e.target.value })}
+                  rows={2}
+                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+                  placeholder="Official reply..."
+                />
+              </div>
+            </div>
+
+            <div className="mt-6 flex justify-end space-x-3">
+              <button
+                onClick={() => setEditModal({ open: false, review: null })}
+                className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleEditSubmit}
+                className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
+              >
+                Save Changes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   )
 }
 

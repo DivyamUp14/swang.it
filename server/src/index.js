@@ -3250,7 +3250,7 @@ app.post('/api/appointment/:bookingId/:token/join', authMiddleware, requireAnyRo
 });
 
 // Reviews
-app.get('/api/consultants/:id/reviews', authMiddleware, requireAnyRole('customer', 'consultant'), async (req, res) => {
+app.get('/api/consultants/:id/reviews', async (req, res) => {
   try {
     const consultantId = Number(req.params.id);
     // Q1: Exclude hidden reviews from public display
@@ -7361,6 +7361,190 @@ app.put('/api/admin/maintenance-mode', authMiddleware, requireAdmin, async (req,
       maintenance_mode: enabled,
       message: `Maintenance mode ${enabled ? 'enabled' : 'disabled'}`
     });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+
+// Get consultant reviews (public)
+app.get('/api/consultants/:id/reviews', async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const reviews = await db.prepare(`
+      SELECT r.*, 
+             u.nickname as customer_nickname,
+             u.email as customer_email
+      FROM reviews r
+      JOIN users u ON r.customer_id = u.id
+      WHERE r.consultant_id = ? AND (r.is_hidden = 0 OR r.is_hidden IS NULL)
+      ORDER BY r.created_at DESC
+    `).all(id);
+
+    res.json({ reviews });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ============================================
+// REVIEWS MANAGEMENT (ADMIN)
+// ============================================
+
+// List all reviews (admin only)
+app.get('/api/admin/reviews', authMiddleware, requireAdmin, async (req, res) => {
+  try {
+    const page = Math.max(1, Number(req.query.page || 1));
+    const pageSize = Math.max(1, Math.min(100, Number(req.query.pageSize || 50)));
+    const { consultantId, rating, search } = req.query;
+
+    let baseQuery = `
+      FROM reviews r
+      JOIN users u_customer ON r.customer_id = u_customer.id
+      JOIN users u_consultant ON r.consultant_id = u_consultant.id
+      LEFT JOIN consultant_profiles cp ON r.consultant_id = cp.consultant_id
+      WHERE 1=1
+    `;
+    const params = [];
+
+    if (consultantId) {
+      baseQuery += ' AND r.consultant_id = ?';
+      params.push(Number(consultantId));
+    }
+
+    if (rating) {
+      baseQuery += ' AND r.rating = ?';
+      params.push(Number(rating));
+    }
+
+    if (search) {
+      baseQuery += ' AND (r.comment LIKE ? OR u_consultant.nickname LIKE ? OR cp.name LIKE ?)';
+      const term = `%${search}%`;
+      params.push(term, term, term);
+    }
+
+    const countQuery = `SELECT COUNT(*) as count ${baseQuery}`;
+    const totalResult = await db.prepare(countQuery).get(...params);
+    const total = totalResult.count;
+
+    const dataQuery = `
+      SELECT r.*, 
+             u_customer.email as customer_email, 
+             u_customer.nickname as customer_nickname,
+             u_consultant.nickname as consultant_nickname,
+             cp.name as consultant_name,
+             cp.profile_photo as consultant_photo
+      ${baseQuery}
+      ORDER BY r.created_at DESC
+      LIMIT ? OFFSET ?
+    `;
+    params.push(pageSize, (page - 1) * pageSize);
+
+    const reviews = await db.prepare(dataQuery).all(...params);
+
+    res.json({
+      reviews,
+      total,
+      page,
+      pageSize
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Update review (admin only)
+app.put('/api/admin/reviews/:id', authMiddleware, requireAdmin, async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const { rating, comment, is_hidden, reply, moderation_notes } = req.body;
+
+    const review = await db.prepare('SELECT * FROM reviews WHERE id = ?').get(id);
+    if (!review) {
+      return res.status(404).json({ error: 'Review not found' });
+    }
+
+    const updates = [];
+    const params = [];
+
+    if (rating !== undefined) {
+      updates.push('rating = ?');
+      params.push(rating);
+    }
+    if (comment !== undefined) {
+      updates.push('comment = ?');
+      params.push(comment);
+    }
+    if (is_hidden !== undefined) {
+      updates.push('is_hidden = ?');
+      params.push(is_hidden ? 1 : 0);
+    }
+    if (reply !== undefined) {
+      updates.push('reply = ?');
+      params.push(reply);
+    }
+    if (moderation_notes !== undefined) {
+      updates.push('moderation_notes = ?');
+      params.push(moderation_notes);
+    }
+
+    if (updates.length === 0) {
+      return res.status(400).json({ error: 'No fields to update' });
+    }
+
+    params.push(id);
+    await db.prepare(`UPDATE reviews SET ${updates.join(', ')} WHERE id = ?`).run(...params);
+
+    // Recalculate consultant stats if rating or visibility changed
+    if (rating !== undefined || is_hidden !== undefined) {
+      const cid = review.consultant_id;
+      const stats = await db.prepare(`
+                SELECT COUNT(*) as count, AVG(rating) as avg_rating 
+                FROM reviews 
+                WHERE consultant_id = ? AND (is_hidden = 0 OR is_hidden IS NULL)
+             `).get(cid);
+
+      if (stats) {
+        await db.prepare('UPDATE consultant_profiles SET review_count = ?, rating = ? WHERE consultant_id = ?')
+          .run(stats.count || 0, stats.avg_rating || 0, cid);
+      }
+    }
+
+    await logAdminAction(req.user.id, 'update_review', 'review', id, { rating, is_hidden }, req.ip);
+
+    const updated = await db.prepare('SELECT * FROM reviews WHERE id = ?').get(id);
+    res.json({ review: updated, message: 'Review updated successfully' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Delete review (admin only)
+app.delete('/api/admin/reviews/:id', authMiddleware, requireAdmin, async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+
+    const review = await db.prepare('SELECT consultant_id FROM reviews WHERE id = ?').get(id);
+    if (!review) return res.status(404).json({ error: 'Review not found' });
+
+    await db.prepare('DELETE FROM reviews WHERE id = ?').run(id);
+
+    // Update stats
+    const cid = review.consultant_id;
+    const stats = await db.prepare(`
+            SELECT COUNT(*) as count, AVG(rating) as avg_rating 
+            FROM reviews 
+            WHERE consultant_id = ? AND (is_hidden = 0 OR is_hidden IS NULL)
+         `).get(cid);
+
+    if (stats) {
+      await db.prepare('UPDATE consultant_profiles SET review_count = ?, rating = ? WHERE consultant_id = ?')
+        .run(stats.count || 0, stats.avg_rating || 0, cid);
+    }
+
+    await logAdminAction(req.user.id, 'delete_review', 'review', id, null, req.ip);
+
+    res.json({ message: 'Review deleted successfully' });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
